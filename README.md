@@ -10,6 +10,12 @@ Taking data from Apple Health (and maybe Strava) and visualizing it in Foxglove.
 
 ## Supported Data Types
 
-- [ ] .gpx files
+- [x] .gpx files
 - [ ] export.xml file from Apple Health export
 - [ ] ecg .csv files
+
+## Running
+
+```sh
+poetry run health_visualizer --input apple_health_export/workout-routes/route_2025-03-22_1.07pm.gpx --overwrite
+```
