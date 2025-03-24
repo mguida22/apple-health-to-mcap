@@ -1,7 +1,7 @@
 import foxglove
-from foxglove.channels import LogChannel
+from foxglove.channels import GeoJsonChannel, LogChannel
 from foxglove.schemas import GeoJson
-from geojson import Feature, Point
+import geojson
 import gpxpy
 import os
 import logging
@@ -32,7 +32,7 @@ def process_gpx_to_mcap(
         gpx = gpxpy.parse(gpx_file)
 
     # Create a log channel for GPS data
-    geojson_chan = LogChannel(topic="/geojson")
+    geojson_chan = GeoJsonChannel(topic="/geojson")
 
     try:
         # Create a new MCAP file for recording
@@ -46,18 +46,23 @@ def process_gpx_to_mcap(
                         # Create a log entry for each GPS point
                         geojson_chan.log(
                             GeoJson(
-                                geojson=Feature(
-                                    type="Feature",
-                                    geometry=Point(
-                                        coordinates=[point.longitude, point.latitude]
+                                geojson=geojson.dumps(
+                                    geojson.Feature(
+                                        type="Feature",
+                                        geometry=geojson.Point(
+                                            coordinates=[
+                                                point.longitude,
+                                                point.latitude,
+                                            ]
+                                        ),
+                                        properties={
+                                            "elevation": point.elevation,
+                                            "time": point.time.isoformat(),
+                                        },
                                     ),
-                                    properties={
-                                        "elevation": point.elevation,
-                                        "time": point.time.isoformat(),
-                                    },
                                 ),
                             ),
-                            log_time=point.time.isoformat(),
+                            log_time=int(point.time.timestamp() * 1e9),
                         )
     except FileExistsError:
         logger.warning(
