@@ -31,6 +31,11 @@ def main():
         default=Path('output'),
         help='Path to output directory (default: ./output)'
     )
+    parser.add_argument(
+        '--overwrite',
+        action='store_true',
+        help='Overwrite existing files'
+    )
     args = parser.parse_args()
 
     logger.info(f"Processing input from '{args.input}' into MCAP at '{args.output}'")
@@ -39,7 +44,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
 
     try:
-        process_gpx_to_mcap(args.input, args.output)
+        process_gpx_to_mcap(args.input, args.output, args.overwrite)
     except Exception as e:
         logger.error(f"Error processing data: {e}")
         raise
