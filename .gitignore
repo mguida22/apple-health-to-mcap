@@ -1,2 +1,4 @@
 apple_health_export/
+output/
 __pycache__/
+.DS_Store

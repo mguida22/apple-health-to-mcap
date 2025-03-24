@@ -115,7 +115,19 @@ files = [
     {file = "foxglove_sdk-0.4.0.tar.gz", hash = "sha256:5377c546a3b2582ba3ba733d5ad6343aa162ed54f07db46f8c455d6c7eca9312"},
 ]
 
+[[package]]
+name = "gpxpy"
+version = "1.6.2"
+description = "GPX file parser and GPS track manipulation library"
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+files = [
+    {file = "gpxpy-1.6.2-py3-none-any.whl", hash = "sha256:289bc2d80f116c988d0a1e763fda22838f83005573ece2bbc6521817b26fb40a"},
+    {file = "gpxpy-1.6.2.tar.gz", hash = "sha256:a72c484b97ec42b80834353b029cc8ee1b79f0ffca1179b2210bb3baf26c01ae"},
+]
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "cb3b6fd0ba53747dfbe52f7453b31770a4b90926d00935f531bae000dfb63ca6"
+content-hash = "e290a55a20652cfab18b493db2f519146e749445954da0e91f16e974f77a280a"

@@ -2,6 +2,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from health_visualizer.processor.processor import process_gpx_to_mcap
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -11,11 +13,17 @@ logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description='Process health data into MCAP.')
+    # parser.add_argument(
+    #     '--input',
+    #     type=Path,
+    #     required=True,
+    #     help='Path to input file or directory. Should be an extracted zip file from Apple Health.'
+    # )
     parser.add_argument(
         '--input',
         type=Path,
         required=True,
-        help='Path to input file or directory. Should be an extracted zip file from Apple Health.'
+        help='Path to a single .gpx file to process'
     )
     parser.add_argument(
         '--output',
@@ -31,7 +39,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
 
     try:
-        pass
+        process_gpx_to_mcap(args.input, args.output)
     except Exception as e:
         logger.error(f"Error processing data: {e}")
         raise
