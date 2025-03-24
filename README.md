@@ -12,12 +12,16 @@ Take data from Apple Health (and maybe Strava) and visualize it in [Foxglove](ht
 
 - [x] .gpx files
 - [ ] export.xml file from Apple Health export
-- [ ] ecg .csv files
+- [x] ecg .csv files
 
 ## Running
 
 ```sh
-poetry run health_visualizer --input apple_health_export/workout-routes/route_2025-03-22_1.07pm.gpx --overwrite
+# GPX file
+poetry run health_visualizer --input apple_health_export/workout-routes/route_2025-03-22_1.07pm.gpx --input-type "gpx" --overwrite
+
+# ECG file
+poetry run health_visualizer --input apple_health_export/electrocardiograms/ecg_2022-11-30.csv --input-type "ecg" --overwrite
 ```
 
 ## Visualizing
