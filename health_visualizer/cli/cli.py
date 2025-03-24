@@ -5,14 +5,14 @@ from pathlib import Path
 from health_visualizer.processor.processor import process_gpx_to_mcap
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 logger = logging.getLogger(__name__)
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Process health data into MCAP.')
+    parser = argparse.ArgumentParser(description="Process health data into MCAP.")
     # parser.add_argument(
     #     '--input',
     #     type=Path,
@@ -20,21 +20,19 @@ def main():
     #     help='Path to input file or directory. Should be an extracted zip file from Apple Health.'
     # )
     parser.add_argument(
-        '--input',
+        "--input",
         type=Path,
         required=True,
-        help='Path to a single .gpx file to process'
+        help="Path to a single .gpx file to process",
     )
     parser.add_argument(
-        '--output',
+        "--output",
         type=Path,
-        default=Path('output'),
-        help='Path to output directory (default: ./output)'
+        default=Path("output"),
+        help="Path to output directory (default: ./output)",
     )
     parser.add_argument(
-        '--overwrite',
-        action='store_true',
-        help='Overwrite existing files'
+        "--overwrite", action="store_true", help="Overwrite existing files"
     )
     args = parser.parse_args()
 

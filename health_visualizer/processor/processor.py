@@ -1,13 +1,19 @@
 import foxglove
 from foxglove.channels import LogChannel
-from foxglove.schemas import Log, LogLevel
+from foxglove.schemas import GeoJson
+from geojson import Feature, Point
 import gpxpy
 import os
 import logging
 
 logger = logging.getLogger(__name__)
 
-def process_gpx_to_mcap(gpx_filepath: str, output_dir: str, overwrite: bool = False) -> str:
+foxglove.set_log_level(logging.DEBUG)
+
+
+def process_gpx_to_mcap(
+    gpx_filepath: str, output_dir: str, overwrite: bool = False
+) -> str:
     """
     Process a GPX file and convert it to MCAP format.
 
@@ -19,14 +25,14 @@ def process_gpx_to_mcap(gpx_filepath: str, output_dir: str, overwrite: bool = Fa
     """
     # existing name of the file, without the extension
     existing_name = os.path.splitext(os.path.basename(gpx_filepath))[0]
-    mcap_filepath = os.path.join(output_dir, existing_name + '.mcap')
-
-    # Create a log channel for GPS data
-    gps_chan = LogChannel(topic="/gps_data")
+    mcap_filepath = os.path.join(output_dir, existing_name + ".mcap")
 
     # Parse the GPX file
-    with open(gpx_filepath, 'r') as gpx_file:
+    with open(gpx_filepath, "r") as gpx_file:
         gpx = gpxpy.parse(gpx_file)
+
+    # Create a log channel for GPS data
+    geojson_chan = LogChannel(topic="/geojson")
 
     try:
         # Create a new MCAP file for recording
@@ -38,15 +44,24 @@ def process_gpx_to_mcap(gpx_filepath: str, output_dir: str, overwrite: bool = Fa
                     # Process each point
                     for point in segment.points:
                         # Create a log entry for each GPS point
-                        gps_chan.log(
-                            Log(
-                                level=LogLevel.Info,
-                                name="GPS Point",
-                                message=f"Lat: {point.latitude}, Lon: {point.longitude}, "
-                                       f"Elevation: {point.elevation}, Time: {point.time}",
+                        geojson_chan.log(
+                            GeoJson(
+                                geojson=Feature(
+                                    type="Feature",
+                                    geometry=Point(
+                                        coordinates=[point.longitude, point.latitude]
+                                    ),
+                                    properties={
+                                        "elevation": point.elevation,
+                                        "time": point.time.isoformat(),
+                                    },
+                                ),
                             ),
+                            log_time=point.time.isoformat(),
                         )
     except FileExistsError:
-        logger.warning(f"File {mcap_filepath} already exists. Run with --overwrite to replace the existing file.")
+        logger.warning(
+            f"File {mcap_filepath} already exists. Run with --overwrite to replace the existing file."
+        )
 
     return mcap_filepath
