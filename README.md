@@ -1,6 +1,6 @@
 # Foxglove SDK Hack Week
 
-Taking data from Apple Health (and maybe Strava) and visualizing it in Foxglove.
+Take data from Apple Health (and maybe Strava) and visualize it in [Foxglove](https://foxglove.dev/).
 
 ## Downloading Apple Health Data
 
@@ -19,3 +19,7 @@ Taking data from Apple Health (and maybe Strava) and visualizing it in Foxglove.
 ```sh
 poetry run health_visualizer --input apple_health_export/workout-routes/route_2025-03-22_1.07pm.gpx --overwrite
 ```
+
+## Visualizing
+
+Open Foxglove and import your mcap file.
