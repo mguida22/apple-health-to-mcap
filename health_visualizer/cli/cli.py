@@ -2,6 +2,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from health_visualizer.processor.combined import process_combined_to_mcap
 from health_visualizer.processor.ecg import process_ecg_to_mcap
 from health_visualizer.processor.gpx import process_gpx_to_mcap
 from health_visualizer.processor.xml_export import process_xml_export_to_mcap
@@ -24,9 +25,9 @@ def main():
     )
     parser.add_argument(
         "--input-type",
-        choices=["gpx", "ecg", "export"],
+        choices=["gpx", "ecg", "export", "combined"],
         required=True,
-        help="Type of input file to process (gpx, ecg, export)",
+        help="Type of input file to process (gpx, ecg, export, combined)",
     )
     parser.add_argument(
         "--output",
@@ -51,6 +52,8 @@ def main():
             process_ecg_to_mcap(args.input, args.output, args.overwrite)
         elif args.input_type == "export":
             process_xml_export_to_mcap(args.input, args.output, args.overwrite)
+        elif args.input_type == "combined":
+            process_combined_to_mcap(args.input, args.output, args.overwrite)
     except Exception as e:
         logger.error(f"Error processing data: {e}")
         raise

@@ -7,7 +7,7 @@ import datetime
 
 logger = logging.getLogger(__name__)
 
-excluded_source_names = []
+excluded_source_names = ["Whitefish Wave", "WaterMinder"]
 
 metrics_schema = {
     "type": "object",
