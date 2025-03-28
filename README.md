@@ -1,6 +1,6 @@
 # Foxglove SDK Hack Week
 
-Take data from Apple Health (and maybe Strava) and visualize it in [Foxglove](https://foxglove.dev/).
+Process data from an Apple Health export and visualize it in [Foxglove](https://foxglove.dev/) using the [Foxglove SDK](https://docs.foxglove.dev/docs/sdk/introduction?lang=python).
 
 ## Downloading Apple Health Data
 
@@ -8,22 +8,18 @@ Take data from Apple Health (and maybe Strava) and visualize it in [Foxglove](ht
 2. Scroll down and select "Export All Health Data". It will generate a zip file.
 3. Share the zip file to your computer.
 
-## Supported Data Types
-
-- [x] .gpx files
-- [ ] export.xml file from Apple Health export
-- [x] ecg .csv files
-
 ## Running
 
 ```sh
-# GPX file
-poetry run health_visualizer --input apple_health_export/workout-routes/route_2025-03-22_1.07pm.gpx --input-type "gpx" --overwrite
-
-# ECG file
-poetry run health_visualizer --input apple_health_export/electrocardiograms/ecg_2022-11-30.csv --input-type "ecg" --overwrite
+poetry run health_visualizer
 ```
+
+## Supported Data Types
+
+- [x] workouts from the export.xml file
+- [x] .gpx files
+- [x] ecg .csv files
 
 ## Visualizing
 
-Open Foxglove and import your mcap file.
+Open Foxglove and import your mcap file to view.

@@ -1,16 +1,51 @@
-from xml.etree import ElementTree
 import foxglove
-from foxglove import Channel
-import os
 import logging
-import datetime
+import os
+from dataclasses import dataclass
+from datetime import datetime
+from foxglove import Channel
+from typing import Dict, Optional, Tuple
+from xml.etree import ElementTree
+
 
 logger = logging.getLogger(__name__)
 
-excluded_source_names = ["Whitefish Wave", "WaterMinder"]
 
-metrics_schema = {
+@dataclass(frozen=True)
+class WorkoutSummary:
+    workout_type: str
+    source_name: str
+    source_version: str
+    duration: float
+    duration_unit: str
+    start_date: str
+    end_date: str
+    device: Optional[str]
+
+
+start_stop_schema = {
     "type": "object",
+    "title": "start_stop",
+    "properties": {
+        "event": {"type": "string"},
+        "reason": {"type": "string"},
+    },
+}
+START_STOP_CHANNEL = Channel(topic=f"/start-stop", schema=start_stop_schema)
+
+metadata_schema = {
+    "type": "object",
+    "title": "metadata",
+    "properties": {
+        "key": {"type": "string"},
+        "value": {"type": "string"},
+    },
+}
+METADATA_CHANNEL = Channel(topic=f"/metadata", schema=metadata_schema)
+
+hk_metrics_schema = {
+    "type": "object",
+    "title": "hk_metrics",
     "properties": {
         "unit": {"type": "string"},
         "value": {"type": "number"},
@@ -25,9 +60,17 @@ metrics_schema = {
 }
 
 
+def fmt_time(time_str: str) -> int:
+    return int(datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S %z").timestamp() * 1e9)
+
+
 def process_xml_export_to_mcap(
-    xml_filepath: str, output_dir: str, overwrite: bool = False
-) -> str:
+    workout: WorkoutSummary,
+    xml_filepath: str,
+    output_dir: str,
+    overwrite: bool = False,
+    filename: Optional[str] = None,
+) -> Tuple[str, Optional[str]]:
     """
     Process an Apple Health XML export file and convert it to MCAP format.
 
@@ -37,48 +80,71 @@ def process_xml_export_to_mcap(
         overwrite (bool): Whether to overwrite existing files
 
     Returns:
-        str: Path to the generated MCAP file
+        Tuple[str, Optional[str]]: Path to the generated MCAP file and GPX file path
     """
-    # Create output filename
-    existing_name = os.path.splitext(os.path.basename(xml_filepath))[0]
-    mcap_filepath = os.path.join(output_dir, existing_name + ".mcap")
+    if filename is None:
+        existing_name = os.path.splitext(os.path.basename(xml_filepath))[0]
+        mcap_filepath = os.path.join(output_dir, existing_name + ".mcap")
+    else:
+        mcap_filepath = os.path.join(output_dir, filename)
 
-    channels_by_type = {}
+    gpx_path = None
     try:
         # Create a new MCAP file for recording
         with foxglove.open_mcap(mcap_filepath, allow_overwrite=overwrite):
-            for _, elem in ElementTree.iterparse(xml_filepath):
-                # skip if the sourceName is in the excluded list
-                if elem.attrib.get("sourceName") in excluded_source_names:
+            logger.info(f"Processing workout from export file at {xml_filepath}")
+            # process the workout element
+            root = ElementTree.parse(xml_filepath).getroot()
+            for elem in root.iterfind("Workout"):
+                # we don't have ids so we check by start/end date and source name/version
+                # to be reasonably sure we're processing the right workout
+                if (
+                    elem.attrib.get("startDate") != workout.start_date
+                    or elem.attrib.get("endDate") != workout.end_date
+                    or elem.attrib.get("sourceName") != workout.source_name
+                    or elem.attrib.get("sourceVersion") != workout.source_version
+                ):
                     continue
 
+                for child in elem:
+                    path = process_workout_child_elem(child)
+                    if path:
+                        gpx_path = path
+
+            # process other data that we find by time in the export.xml file,
+            # like heart rate, etc.
+            # TODO: there's probably a way to do all this in the same pass
+            logger.info(
+                f"Processing other metrics that were logged during the workout from export file at {xml_filepath}"
+            )
+            workout_start_date = datetime.strptime(
+                workout.start_date, "%Y-%m-%d %H:%M:%S %z"
+            )
+            channels: Dict[str, Channel] = {}
+            for _, elem in ElementTree.iterparse(xml_filepath):
+                # narrow down by the date before we parse the string into a datetime
                 start_date = elem.attrib.get("startDate")
-                if start_date and start_date.startswith("2025-03-22"):
+                if start_date and start_date.startswith(
+                    workout_start_date.strftime("%Y-%m-%d")
+                ):
                     raw_type = elem.attrib.get("type")
                     if raw_type is None:
-                        logger.warning(f"No type for {elem.attrib}")
+                        logger.warning(f"No type for {elem.tag} {elem.attrib}")
                         continue
 
                     formatted_type = raw_type.replace("HKQuantityTypeIdentifier", "")
-                    curr_channel = channels_by_type.get(formatted_type)
+                    curr_channel = channels.get(formatted_type)
                     if curr_channel is None:
                         curr_channel = Channel(
-                            topic=f"/{formatted_type}", schema=metrics_schema
+                            topic=f"/{formatted_type}", schema=hk_metrics_schema
                         )
-                        channels_by_type[formatted_type] = curr_channel
+                        channels[formatted_type] = curr_channel
 
                     log_time = None
                     try:
-                        log_time = int(
-                            datetime.datetime.strptime(
-                                elem.attrib.get("endDate"), "%Y-%m-%d %H:%M:%S %z"
-                            ).timestamp()
-                            * 1e9
-                        )
-                    except Exception:
-                        logger.warning(
-                            f"Invalid creationDate: {elem.attrib.get('creationDate')}"
-                        )
+                        log_time = fmt_time(elem.attrib.get("endDate"))
+                    except:
+                        logger.warning(f"Invalid endDate: {elem.attrib.get('endDate')}")
                         continue
 
                     curr_channel.log(
@@ -101,4 +167,52 @@ def process_xml_export_to_mcap(
             f"File {mcap_filepath} already exists. Run with --overwrite to replace the existing file."
         )
 
-    return mcap_filepath
+    logger.info(f"GPX path: {gpx_path}")
+    return (mcap_filepath, gpx_path)
+
+
+def process_workout_child_elem(elem: ElementTree.Element) -> Optional[str]:
+    tag = elem.tag
+    attrs = elem.attrib
+
+    gpx_path = None
+
+    if tag == "MetadataEntry":
+        # metadata about the entire workout (not time-specific)
+        pass
+
+    elif tag == "WorkoutStatistics":
+        # statistics about the entire workout (not time-specific)
+        pass
+
+    elif tag == "WorkoutEvent":
+        event_type = attrs.get("type")
+        if event_type == "HKWorkoutEventTypePause":
+            # handles Slopes trigger reason
+            child = elem.find(
+                "MetadataEntry[@key='com.consumedbycode.slopes.hk.trigger_reason']"
+            )
+            reason = child.attrib.get("value") if child else None
+            START_STOP_CHANNEL.log(
+                {"event": "Pause", "reason": reason},
+                log_time=fmt_time(attrs.get("date")),
+            )
+        elif event_type == "HKWorkoutEventTypeResume":
+            child = elem.find(
+                "MetadataEntry[@key='com.consumedbycode.slopes.hk.trigger_reason']"
+            )
+            reason = child.attrib.get("value") if child else None
+            START_STOP_CHANNEL.log(
+                {"event": "Resume", "reason": reason},
+                log_time=fmt_time(attrs.get("date")),
+            )
+        elif event_type == "HKWorkoutEventTypeSegment":
+            # segment metadata. not clear how segments are split up.
+            pass
+
+    elif tag == "WorkoutRoute":
+        # pull out the GPX file here to parse later
+        child = elem.find("FileReference")
+        gpx_path = child.attrib.get("path") if child else None
+
+    return gpx_path

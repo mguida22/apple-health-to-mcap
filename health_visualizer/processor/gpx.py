@@ -1,3 +1,4 @@
+from typing import Optional
 import foxglove
 from foxglove import Channel, Schema
 from foxglove.channels import GeoJsonChannel
@@ -11,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 foxglove.set_log_level(logging.DEBUG)
 
-metrics_schema = {
+gpx_metrics_schema = {
     "type": "object",
+    "title": "gpx_metrics",
     "properties": {
         "elevation": {"type": "number"},
         "speed": {"type": "number"},
@@ -24,7 +26,10 @@ metrics_schema = {
 
 
 def process_gpx_to_mcap(
-    gpx_filepath: str, output_dir: str, overwrite: bool = False
+    gpx_filepath: str,
+    output_dir: str,
+    overwrite: bool = False,
+    filename: Optional[str] = None,
 ) -> str:
     """
     Process a GPX file and convert it to MCAP format.
@@ -35,17 +40,20 @@ def process_gpx_to_mcap(
     Returns:
         str: Path to the generated MCAP file
     """
-    # existing name of the file, without the extension
-    existing_name = os.path.splitext(os.path.basename(gpx_filepath))[0]
-    mcap_filepath = os.path.join(output_dir, existing_name + ".mcap")
+    if filename is None:
+        existing_name = os.path.splitext(os.path.basename(gpx_filepath))[0]
+        mcap_filepath = os.path.join(output_dir, existing_name + ".mcap")
+    else:
+        mcap_filepath = os.path.join(output_dir, filename)
 
     # Parse the GPX file
     with open(gpx_filepath, "r") as gpx_file:
         gpx = gpxpy.parse(gpx_file)
 
     geojson_chan = GeoJsonChannel(topic="/geojson")
-    metrics_chan = Channel(topic="/metrics", schema=metrics_schema)
+    metrics_chan = Channel(topic="/gpx_metrics", schema=gpx_metrics_schema)
 
+    logger.info(f"Processing GPX file at {gpx_filepath}")
     try:
         # Create a new MCAP file for recording
         with foxglove.open_mcap(mcap_filepath, allow_overwrite=overwrite):
