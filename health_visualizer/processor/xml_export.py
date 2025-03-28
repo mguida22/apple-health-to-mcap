@@ -31,17 +31,6 @@ start_stop_schema = {
         "reason": {"type": "string"},
     },
 }
-START_STOP_CHANNEL = Channel(topic=f"/start-stop", schema=start_stop_schema)
-
-metadata_schema = {
-    "type": "object",
-    "title": "metadata",
-    "properties": {
-        "key": {"type": "string"},
-        "value": {"type": "string"},
-    },
-}
-METADATA_CHANNEL = Channel(topic=f"/metadata", schema=metadata_schema)
 
 hk_metrics_schema = {
     "type": "object",
@@ -167,11 +156,13 @@ def process_xml_export_to_mcap(
             f"File {mcap_filepath} already exists. Run with --overwrite to replace the existing file."
         )
 
-    logger.info(f"GPX path: {gpx_path}")
+    logger.info(f"Finished processing workout. GPX path: {gpx_path}")
     return (mcap_filepath, gpx_path)
 
 
-def process_workout_child_elem(elem: ElementTree.Element) -> Optional[str]:
+def process_workout_child_elem(
+    elem: ElementTree.Element, channels: Dict[str, Channel]
+) -> Optional[str]:
     tag = elem.tag
     attrs = elem.attrib
 
@@ -193,7 +184,13 @@ def process_workout_child_elem(elem: ElementTree.Element) -> Optional[str]:
                 "MetadataEntry[@key='com.consumedbycode.slopes.hk.trigger_reason']"
             )
             reason = child.attrib.get("value") if child else None
-            START_STOP_CHANNEL.log(
+            curr_channel = channels.get("start-stop")
+            if curr_channel is None:
+                curr_channel = Channel(topic=f"/start-stop", schema=start_stop_schema)
+                channels["start-stop"] = curr_channel
+
+            logger.info(f"Logging pause event: {reason}")
+            curr_channel.log(
                 {"event": "Pause", "reason": reason},
                 log_time=fmt_time(attrs.get("date")),
             )
@@ -202,7 +199,13 @@ def process_workout_child_elem(elem: ElementTree.Element) -> Optional[str]:
                 "MetadataEntry[@key='com.consumedbycode.slopes.hk.trigger_reason']"
             )
             reason = child.attrib.get("value") if child else None
-            START_STOP_CHANNEL.log(
+            curr_channel = channels.get("start-stop")
+            if curr_channel is None:
+                curr_channel = Channel(topic=f"/start-stop", schema=start_stop_schema)
+                channels["start-stop"] = curr_channel
+
+            logger.info(f"Logging resume event: {reason}")
+            curr_channel.log(
                 {"event": "Resume", "reason": reason},
                 log_time=fmt_time(attrs.get("date")),
             )
@@ -211,8 +214,10 @@ def process_workout_child_elem(elem: ElementTree.Element) -> Optional[str]:
             pass
 
     elif tag == "WorkoutRoute":
-        # pull out the GPX file here to parse later
-        child = elem.find("FileReference")
-        gpx_path = child.attrib.get("path") if child else None
+        for child in elem:
+            if child.tag == "FileReference":
+                path = child.attrib.get("path")
+                if path:
+                    gpx_path = path
 
     return gpx_path
