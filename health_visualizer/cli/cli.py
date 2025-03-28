@@ -216,9 +216,13 @@ def handle_by_workouts_from_export(args: argparse.Namespace):
         filename,
     )
 
-    if gpx_path:
-        # process the gpx file
-        process_gpx_to_mcap(gpx_path, args.output_dir, args.overwrite)
+    # if gpx_path:
+    #     # process the gpx file
+    #     rel_path = os.path.join(
+    #         args.input_dir,
+    #         gpx_path.lstrip("/"),
+    #     )
+    # process_gpx_to_mcap(rel_path, args.output_dir, args.overwrite, filename)
 
     print(f"Finished processing. Saved to {output_filepath}")
 

@@ -4,8 +4,13 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from foxglove import Channel
+from foxglove.channels import GeoJsonChannel
+from foxglove.schemas import GeoJson
 from typing import Dict, Optional, Tuple
 from xml.etree import ElementTree
+
+import geojson
+import gpxpy
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +53,18 @@ hk_metrics_schema = {
     },
 }
 
+gpx_metrics_schema = {
+    "type": "object",
+    "title": "gpx_metrics",
+    "properties": {
+        "elevation": {"type": "number"},
+        "speed": {"type": "number"},
+        "course": {"type": "number"},
+        "hAcc": {"type": "number"},
+        "vAcc": {"type": "number"},
+    },
+}
+
 
 def fmt_time(time_str: str) -> int:
     return int(datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S %z").timestamp() * 1e9)
@@ -78,6 +95,7 @@ def process_xml_export_to_mcap(
         mcap_filepath = os.path.join(output_dir, filename)
 
     gpx_path = None
+    channels: Dict[str, Channel] = {}
     try:
         # Create a new MCAP file for recording
         with foxglove.open_mcap(mcap_filepath, allow_overwrite=overwrite):
@@ -96,7 +114,7 @@ def process_xml_export_to_mcap(
                     continue
 
                 for child in elem:
-                    path = process_workout_child_elem(child)
+                    path = process_workout_child_elem(child, channels)
                     if path:
                         gpx_path = path
 
@@ -109,7 +127,6 @@ def process_xml_export_to_mcap(
             workout_start_date = datetime.strptime(
                 workout.start_date, "%Y-%m-%d %H:%M:%S %z"
             )
-            channels: Dict[str, Channel] = {}
             for _, elem in ElementTree.iterparse(xml_filepath):
                 # narrow down by the date before we parse the string into a datetime
                 start_date = elem.attrib.get("startDate")
@@ -151,12 +168,20 @@ def process_xml_export_to_mcap(
                         log_time=log_time,
                     )
 
+            logger.info(f"Finished processing workout. GPX path: {gpx_path}")
+            if gpx_path:
+                # process the gpx file
+                rel_path = os.path.join(
+                    "./apple_health_export",
+                    gpx_path.lstrip("/"),
+                )
+                process_gpx_file(rel_path, channels)
+
     except FileExistsError:
         logger.warning(
             f"File {mcap_filepath} already exists. Run with --overwrite to replace the existing file."
         )
 
-    logger.info(f"Finished processing workout. GPX path: {gpx_path}")
     return (mcap_filepath, gpx_path)
 
 
@@ -189,7 +214,6 @@ def process_workout_child_elem(
                 curr_channel = Channel(topic=f"/start-stop", schema=start_stop_schema)
                 channels["start-stop"] = curr_channel
 
-            logger.info(f"Logging pause event: {reason}")
             curr_channel.log(
                 {"event": "Pause", "reason": reason},
                 log_time=fmt_time(attrs.get("date")),
@@ -204,7 +228,6 @@ def process_workout_child_elem(
                 curr_channel = Channel(topic=f"/start-stop", schema=start_stop_schema)
                 channels["start-stop"] = curr_channel
 
-            logger.info(f"Logging resume event: {reason}")
             curr_channel.log(
                 {"event": "Resume", "reason": reason},
                 log_time=fmt_time(attrs.get("date")),
@@ -221,3 +244,79 @@ def process_workout_child_elem(
                     gpx_path = path
 
     return gpx_path
+
+
+def process_gpx_file(gpx_path: str, channels: Dict[str, Channel]):
+    # Parse the GPX file
+    with open(gpx_path, "r") as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+
+        geojson_chan = channels.get("geojson")
+        if geojson_chan is None:
+            geojson_chan = GeoJsonChannel(topic="/geojson")
+            channels["geojson"] = geojson_chan
+
+        metrics_chan = channels.get("gpx_metrics")
+        if metrics_chan is None:
+            metrics_chan = Channel(topic="/gpx_metrics", schema=gpx_metrics_schema)
+            channels["gpx_metrics"] = metrics_chan
+
+        logger.info(f"Processing GPX file at {gpx_path}")
+        # Process each track
+        for track in gpx.tracks:
+            # Process each segment
+            for segment in track.segments:
+                # Process each point
+                for point in segment.points:
+                    log_time = int(point.time.timestamp() * 1e9)
+                    # Create a log entry for each GPS point
+                    geojson_chan.log(
+                        GeoJson(
+                            geojson=geojson.dumps(
+                                geojson.Feature(
+                                    type="Feature",
+                                    geometry=geojson.Point(
+                                        coordinates=[
+                                            point.longitude,
+                                            point.latitude,
+                                        ]
+                                    ),
+                                    properties={
+                                        "elevation": point.elevation,
+                                        "time": point.time.isoformat(),
+                                    },
+                                ),
+                            ),
+                        ),
+                        log_time=log_time,
+                    )
+
+                    extension_values = get_extension_values(point)
+                    metrics_chan.log(
+                        {
+                            "elevation": point.elevation,
+                            **extension_values,
+                        },
+                        log_time=log_time,
+                    )
+
+
+def get_extension_values(point):
+    values = {
+        "speed": None,
+        "course": None,
+        "hAcc": None,
+        "vAcc": None,
+    }
+
+    for child in point.extensions:
+        if child.tag == "speed":
+            values["speed"] = child.text
+        elif child.tag == "course":
+            values["course"] = int(float(child.text))
+        elif child.tag == "hAcc":
+            values["hAcc"] = child.text
+        elif child.tag == "vAcc":
+            values["vAcc"] = child.text
+
+    return values
