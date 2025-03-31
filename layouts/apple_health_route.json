@@ -1,0 +1,160 @@
+{
+  "configById": {
+    "map!10w7unu": {
+      "zoomLevel": 14,
+      "customTileUrl": "",
+      "disabledTopics": [],
+      "followTopic": "",
+      "layer": "satellite",
+      "topicColors": {
+        "/geojson": "#f54842"
+      },
+      "maxNativeZoom": 18,
+      "topicConfig": {
+        "/geojson": {
+          "pointDisplayMode": "dot",
+          "historyMode": "all",
+          "color": "#f54842"
+        },
+        "/location": {
+          "pointDisplayMode": "dot",
+          "historyMode": "all"
+        }
+      }
+    },
+    "Plot!3f6qz5j": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/gpx_metrics.speed",
+          "enabled": true,
+          "color": "#4e98e2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!154na9h": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/gpx_metrics.elevation",
+          "enabled": true,
+          "color": "#4e98e2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "RawMessages!39d0u27": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gpx_metrics.speed",
+      "fontSize": 72
+    },
+    "RawMessages!304ngk9": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/gpx_metrics.course",
+      "fontSize": 72
+    },
+    "StateTransitions!1bb2lgx": {
+      "paths": [
+        {
+          "value": "/start-stop.event",
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "isSynced": true
+    },
+    "Plot!19hw4i": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/ActiveEnergyBurned.value",
+          "enabled": true,
+          "color": "#4e98e2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!34bmv20": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/HeartRate.value",
+          "enabled": true,
+          "color": "#4e98e2"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": "map!10w7unu",
+      "second": {
+        "first": "Plot!3f6qz5j",
+        "second": "Plot!154na9h",
+        "direction": "column"
+      },
+      "direction": "column"
+    },
+    "second": {
+      "first": {
+        "first": {
+          "first": {
+            "first": "RawMessages!39d0u27",
+            "second": "RawMessages!304ngk9",
+            "direction": "row",
+            "splitPercentage": 45.95382550605456
+          },
+          "second": "StateTransitions!1bb2lgx",
+          "direction": "column"
+        },
+        "second": "Plot!19hw4i",
+        "direction": "column",
+        "splitPercentage": 58.84016973125884
+      },
+      "second": "Plot!34bmv20",
+      "direction": "column",
+      "splitPercentage": 66.13657623947614
+    }
+  }
+}

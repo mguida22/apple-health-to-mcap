@@ -246,6 +246,7 @@ def process_workout_child_elem(
     return gpx_path
 
 
+# this is basically duplicated from gpx.py, but I haven't gotten to cleaning up the code
 def process_gpx_file(gpx_path: str, channels: Dict[str, Channel]):
     # Parse the GPX file
     with open(gpx_path, "r") as gpx_file:

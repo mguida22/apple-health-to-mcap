@@ -208,21 +208,13 @@ def handle_by_workouts_from_export(args: argparse.Namespace):
 
     # get the workout details from the export.xml file
     filename = f"{chosen_workout.workout_type}-{chosen_workout.start_date}.mcap"
-    output_filepath, gpx_path = process_xml_export_to_mcap(
+    output_filepath = process_xml_export_to_mcap(
         chosen_workout,
         os.path.join(args.input_dir, "export.xml"),
         args.output_dir,
         args.overwrite,
         filename,
     )
-
-    # if gpx_path:
-    #     # process the gpx file
-    #     rel_path = os.path.join(
-    #         args.input_dir,
-    #         gpx_path.lstrip("/"),
-    #     )
-    # process_gpx_to_mcap(rel_path, args.output_dir, args.overwrite, filename)
 
     print(f"Finished processing. Saved to {output_filepath}")
 
